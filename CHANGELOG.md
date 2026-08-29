@@ -110,3 +110,31 @@ never directly mentions).
 
 **Decision:** Kept, shipped as the default full pipeline
 (`bisect_agent.py run`).
+
+---
+
+### Post-final — Causal chain, not a flat sentence
+
+**What & why:** a one-sentence explanation still leaves the developer to
+reconstruct *how* the change propagated to the assertion, especially on
+the `medium_*` fixtures where the bug is in a helper the failing test never
+mentions. Changed `explain()` to return a structured JSON causal chain
+(3-7 short steps, first step = the literal diff line, last step = the
+specific assertion) instead of prose alone, rendered as an arrow diagram
+(`agent/tools.render_causal_chain()`) in the CLI output and every
+trajectory. The existing ungrounded-file check now runs against the whole
+chain, not just a paragraph.
+
+**Evidence:** re-ran the full suite after the change — accuracy unaffected
+(identification happens before `explain()` runs; final stage stayed
+100%/10/10 across the rerun), 0 chains flagged as ungrounded. See
+`eval/results.md`'s "chain of failure" section for a full real example
+(`medium_shared_helper`), where the chain correctly surfaces the
+intermediate `clamp()` helper step that a flat explanation would have
+either skipped or hand-waved.
+
+**Decision:** Kept, shipped as the default `explain()` behavior. Requested
+directly by the user mid-build as a way to make the final answer legible as
+reasoning rather than a lookup result — the causal chain is what actually
+turns this from "a Git tool" into a debugging tool, per the brief's own
+framing.

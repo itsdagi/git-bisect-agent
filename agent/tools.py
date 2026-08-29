@@ -96,10 +96,14 @@ def _diff_touched_files(diff_text):
 
 
 def explain(client, model, diff_text, test_output, commit_message, max_tokens=700):
-    """Calls the LLM to produce a plain-language root-cause explanation,
-    grounded strictly in the diff and test output. Post-hoc checks that any
-    file the explanation claims to cite actually appears in the diff; if
-    not, the explanation is flagged rather than trusted verbatim."""
+    """Calls the LLM to produce a root-cause explanation, grounded strictly
+    in the diff and test output. Rather than a single flat sentence, asks
+    for an explicit causal chain -- code change -> immediate effect ->
+    propagation -> assertion failure -- so the explanation reflects how the
+    breakage actually propagated, not just "commit X broke it". Post-hoc
+    checks that any file the explanation claims to cite actually appears in
+    the diff; if not, the explanation is flagged rather than trusted
+    verbatim."""
     prompt = f"""You are explaining why a specific git commit broke a test. You must ground your explanation ONLY in the diff and test output below -- never invent a cause you cannot point to in the diff.
 
 Commit message:
@@ -115,29 +119,63 @@ Failing test output (captured from actually running the test suite at this commi
 {test_output}
 ```
 
-Write a short (3-6 sentence) plain-language explanation of the root cause. You MUST cite at least one specific line or hunk from the diff above (e.g. quote the changed line). Do not reference any file or function that does not appear in the diff. If the diff alone doesn't fully explain the failure, say so explicitly rather than guessing.
+Respond with ONLY a JSON object of this exact shape:
+{{
+  "causal_chain": ["<step 1>", "<step 2>", "...", "<final step>"],
+  "summary": "<1-3 sentence plain-language root cause>"
+}}
+
+Rules for causal_chain:
+- 3 to 7 short steps (each under 14 words), ordered from the literal code
+  change to the observed test failure -- e.g. "changed line X" -> "immediate
+  behavioral effect" -> "how that propagates" -> "which assertion fails and why".
+- The FIRST step must describe the literal change from the diff (quote or
+  closely paraphrase a specific changed line).
+- The LAST step must describe the specific assertion/failure from the test
+  output.
+- Do not invent an intermediate step you can't ground in the diff or test
+  output -- a shorter, honest chain beats a longer invented one.
+- Do not reference any file or function that does not appear in the diff.
 """
     resp = client.messages.create(
         model=model,
         max_tokens=max_tokens,
         messages=[{"role": "user", "content": prompt}],
     )
-    text = resp.content[0].text
+    raw_text = resp.content[0].text
+
+    import json
+    import re
+    causal_chain = []
+    summary = raw_text
+    try:
+        match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+        parsed = json.loads(match.group(0))
+        causal_chain = [str(s).strip() for s in parsed.get("causal_chain", []) if str(s).strip()]
+        summary = str(parsed.get("summary", "")).strip() or raw_text
+    except Exception:
+        pass  # fall back to raw_text as the summary, empty chain
+
+    combined_text = summary + "\n" + "\n".join(causal_chain)
 
     touched_files = _diff_touched_files(diff_text)
     ungrounded = False
     flag_reason = None
     # crude grounding check: if the explanation mentions a "file.py"-shaped
     # token that never appears in the diff's touched files, flag it.
-    import re
-    mentioned = set(re.findall(r"\b([\w./-]+\.py)\b", text))
+    mentioned = set(re.findall(r"\b([\w./-]+\.py)\b", combined_text))
     bogus = {m for m in mentioned if not any(m in f or f.endswith(m) for f in touched_files)}
-    if bogus:
+    if not causal_chain:
+        ungrounded = True
+        flag_reason = "model did not return a parseable causal_chain"
+    elif bogus:
         ungrounded = True
         flag_reason = f"explanation references file(s) not present in the diff: {bogus}"
 
     return {
-        "explanation": text,
+        "explanation": summary,
+        "causal_chain": causal_chain,
+        "raw_response": raw_text,
         "ungrounded": ungrounded,
         "flag_reason": flag_reason,
         "touched_files": list(touched_files),
@@ -146,3 +184,28 @@ Write a short (3-6 sentence) plain-language explanation of the root cause. You M
             "output_tokens": resp.usage.output_tokens,
         },
     }
+
+
+def render_causal_chain(causal_chain):
+    """Renders a causal chain as an arrow diagram, e.g.:
+
+        Changed default include_empty=True in normalize_response()
+           |
+           v
+        API response now contains empty fields
+           |
+           v
+        test_user_response expects previous schema
+           |
+           v
+        Assertion fails: AssertionError: {'a': None} != {'a': 1}
+    """
+    if not causal_chain:
+        return "(no causal chain available)"
+    lines = []
+    for i, step in enumerate(causal_chain):
+        lines.append(step)
+        if i < len(causal_chain) - 1:
+            lines.append("   |")
+            lines.append("   v")
+    return "\n".join(lines)

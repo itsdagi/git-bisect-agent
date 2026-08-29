@@ -1,32 +1,3 @@
-# Evaluation Results
-
-Fixture suite: 10 cases (5 easy, 3 medium, 2 hard).
-
-## Summary
-
-| Stage | Accuracy | Avg test executions | Avg wall time (s) | Avg LLM cost/case ($) |
-|---|---|---|---|---|
-| baseline | 60% (6/10) | 0.0 | 1.87 | 0.0001 |
-| linear | 100% (10/10) | 4.4 | 2.28 | 0.0000 |
-| binary | 90% (9/10) | 3.9 | 1.99 | 0.0000 |
-| verify | 90% (9/10) | 9.9 | 5.06 | 0.0000 |
-| final | 100% (10/10) | 12.3 | 8.33 | 0.0002 |
-
-## Per-case detail
-
-| Case | Difficulty | baseline correct | linear correct | binary correct | verify correct | final correct |
-|---|---|---|---|---|---|---|
-| easy_logic_flip | easy | no | YES | YES | YES | YES |
-| easy_off_by_one | easy | YES | YES | YES | YES | YES |
-| easy_removed_check | easy | YES | YES | YES | YES | YES |
-| easy_syntax_bug | easy | YES | YES | YES | YES | YES |
-| easy_wrong_return | easy | YES | YES | YES | YES | YES |
-| hard_flaky_verify | hard | YES | YES | no | no | YES |
-| hard_misleading_message | hard | no | YES | YES | YES | YES |
-| medium_changed_default | medium | no | YES | YES | YES | YES |
-| medium_config_change | medium | no | YES | YES | YES | YES |
-| medium_shared_helper | medium | YES | YES | YES | YES | YES |
-
 ## Explaining the chain of failure, not just the commit
 
 `explain()` doesn't return a single flat sentence ("commit X broke it"). It

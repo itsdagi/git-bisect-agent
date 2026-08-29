@@ -23,6 +23,7 @@ CASES_DIR = ROOT / "fixtures" / "cases"
 TRAJ_DIR = ROOT / "trajectories"
 RESULTS_JSON = ROOT / "eval" / "raw_results.json"
 RESULTS_MD = ROOT / "eval" / "results.md"
+NARRATIVE_MD = ROOT / "eval" / "_narrative.md"
 
 STAGE_CONFIG = {
     "linear": dict(strategy="linear", do_verify=False, do_explain=False),
@@ -148,6 +149,10 @@ def render_results_md(all_results, cases):
             r = next(r for r in all_results[st] if r["case"] == meta["name"])
             row.append("YES" if r["correct"] else "no")
         lines.append("| " + " | ".join(row) + " |")
+
+    if NARRATIVE_MD.exists():
+        lines.append("")
+        lines.append(NARRATIVE_MD.read_text().rstrip())
 
     RESULTS_MD.write_text("\n".join(lines) + "\n")
 

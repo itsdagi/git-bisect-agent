@@ -37,8 +37,13 @@ def cmd_run(args):
 
     print(json.dumps({k: v for k, v in result.items() if k not in ("verify_result", "explain_result")}, indent=2))
     if result["explain_result"]:
-        print("\n--- explanation ---")
+        from agent.tools import render_causal_chain
+        print("\n--- chain of failure ---")
+        print(render_causal_chain(result["explain_result"]["causal_chain"]))
+        print("\n--- summary ---")
         print(result["explain_result"]["explanation"])
+        if result["explain_result"]["ungrounded"]:
+            print(f"\n[FLAGGED UNGROUNDED] {result['explain_result']['flag_reason']}")
     print(f"\ntrajectory written to {log_path}")
     md_path = log_path.with_suffix(".md")
     md_path.write_text(logger.render_markdown())

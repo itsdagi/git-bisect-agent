@@ -7,8 +7,8 @@
       "identified_sha": "63ca4be66b97eafd68be10963414eeee7c1ef832",
       "ground_truth_sha": "e60d7b499d9c595f522e40da41b5868d6adf02b8",
       "test_executions": 0,
-      "duration_s": 2.44,
-      "llm_cost_usd": 6.607999999999999e-05
+      "duration_s": 4.331,
+      "llm_cost_usd": 6.314e-05
     },
     {
       "case": "easy_off_by_one",
@@ -17,8 +17,8 @@
       "identified_sha": "b6bdc817349327e88bc28cccde4647185a3254b0",
       "ground_truth_sha": "b6bdc817349327e88bc28cccde4647185a3254b0",
       "test_executions": 0,
-      "duration_s": 2.231,
-      "llm_cost_usd": 6.188e-05
+      "duration_s": 1.64,
+      "llm_cost_usd": 6.86e-05
     },
     {
       "case": "easy_removed_check",
@@ -27,8 +27,8 @@
       "identified_sha": "ab4879720966e5f99c43a436587a68a06332875d",
       "ground_truth_sha": "ab4879720966e5f99c43a436587a68a06332875d",
       "test_executions": 0,
-      "duration_s": 1.412,
-      "llm_cost_usd": 5.74e-05
+      "duration_s": 1.417,
+      "llm_cost_usd": 6.034000000000001e-05
     },
     {
       "case": "easy_syntax_bug",
@@ -37,8 +37,8 @@
       "identified_sha": "d9e9c22aec83ec2e79b0a7185dc66aadf7de873d",
       "ground_truth_sha": "d9e9c22aec83ec2e79b0a7185dc66aadf7de873d",
       "test_executions": 0,
-      "duration_s": 1.85,
-      "llm_cost_usd": 6.776e-05
+      "duration_s": 1.739,
+      "llm_cost_usd": 7.07e-05
     },
     {
       "case": "easy_wrong_return",
@@ -47,8 +47,8 @@
       "identified_sha": "a0e4539e6ca5a07a2568e605698ae0326f8ca71b",
       "ground_truth_sha": "a0e4539e6ca5a07a2568e605698ae0326f8ca71b",
       "test_executions": 0,
-      "duration_s": 1.632,
-      "llm_cost_usd": 6.104e-05
+      "duration_s": 1.392,
+      "llm_cost_usd": 6.23e-05
     },
     {
       "case": "hard_flaky_verify",
@@ -57,8 +57,8 @@
       "identified_sha": "f8db8df5b0eff792d3b3c74d8e8f9c1207211aa1",
       "ground_truth_sha": "f8db8df5b0eff792d3b3c74d8e8f9c1207211aa1",
       "test_executions": 0,
-      "duration_s": 1.993,
-      "llm_cost_usd": 6.664e-05
+      "duration_s": 1.622,
+      "llm_cost_usd": 6.622e-05
     },
     {
       "case": "hard_misleading_message",
@@ -67,8 +67,8 @@
       "identified_sha": "37f08d23492250f29adc3c74fd3e2f62352a1994",
       "ground_truth_sha": "530f8f7e5beb42b565b73665b096dab00222e0d1",
       "test_executions": 0,
-      "duration_s": 1.794,
-      "llm_cost_usd": 6.804e-05
+      "duration_s": 1.848,
+      "llm_cost_usd": 6.972e-05
     },
     {
       "case": "medium_changed_default",
@@ -77,8 +77,8 @@
       "identified_sha": "f6e65ce6dcc8124f1d79727d40d1a3896c53fb03",
       "ground_truth_sha": "dcf7fbcb9aa11951c203c1f2e848494556a6b20a",
       "test_executions": 0,
-      "duration_s": 2.179,
-      "llm_cost_usd": 6.79e-05
+      "duration_s": 1.367,
+      "llm_cost_usd": 6.37e-05
     },
     {
       "case": "medium_config_change",
@@ -87,8 +87,8 @@
       "identified_sha": "43064d8e9aae39ba996a5c89776fea0961489d22",
       "ground_truth_sha": "0fb2cc233096204f5ddfc96ba93091d7fd0bc922",
       "test_executions": 0,
-      "duration_s": 1.969,
-      "llm_cost_usd": 7.125999999999999e-05
+      "duration_s": 1.563,
+      "llm_cost_usd": 6.664e-05
     },
     {
       "case": "medium_shared_helper",
@@ -97,8 +97,8 @@
       "identified_sha": "4daa78e26dc0f76a71ac6ae711e42422500b43ed",
       "ground_truth_sha": "4daa78e26dc0f76a71ac6ae711e42422500b43ed",
       "test_executions": 0,
-      "duration_s": 1.694,
-      "llm_cost_usd": 6.762e-05
+      "duration_s": 1.809,
+      "llm_cost_usd": 6.678000000000001e-05
     }
   ],
   "linear": [
@@ -109,7 +109,7 @@
       "identified_sha": "e60d7b499d9c595f522e40da41b5868d6adf02b8",
       "ground_truth_sha": "e60d7b499d9c595f522e40da41b5868d6adf02b8",
       "test_executions": 5,
-      "duration_s": 2.061,
+      "duration_s": 2.85,
       "llm_cost_usd": 0.0
     },
     {
@@ -119,7 +119,7 @@
       "identified_sha": "b6bdc817349327e88bc28cccde4647185a3254b0",
       "ground_truth_sha": "b6bdc817349327e88bc28cccde4647185a3254b0",
       "test_executions": 4,
-      "duration_s": 1.443,
+      "duration_s": 2.089,
       "llm_cost_usd": 0.0
     },
     {
@@ -129,7 +129,7 @@
       "identified_sha": "ab4879720966e5f99c43a436587a68a06332875d",
       "ground_truth_sha": "ab4879720966e5f99c43a436587a68a06332875d",
       "test_executions": 4,
-      "duration_s": 1.442,
+      "duration_s": 2.02,
       "llm_cost_usd": 0.0
     },
     {
@@ -139,7 +139,7 @@
       "identified_sha": "d9e9c22aec83ec2e79b0a7185dc66aadf7de873d",
       "ground_truth_sha": "d9e9c22aec83ec2e79b0a7185dc66aadf7de873d",
       "test_executions": 5,
-      "duration_s": 1.76,
+      "duration_s": 2.68,
       "llm_cost_usd": 0.0
     },
     {
@@ -149,17 +149,17 @@
       "identified_sha": "a0e4539e6ca5a07a2568e605698ae0326f8ca71b",
       "ground_truth_sha": "a0e4539e6ca5a07a2568e605698ae0326f8ca71b",
       "test_executions": 4,
-      "duration_s": 1.407,
+      "duration_s": 1.933,
       "llm_cost_usd": 0.0
     },
     {
       "case": "hard_flaky_verify",
       "difficulty": "hard",
-      "correct": false,
-      "identified_sha": "b4508bf236ddeefb8aec2fc53bd5ec097af4acd1",
+      "correct": true,
+      "identified_sha": "f8db8df5b0eff792d3b3c74d8e8f9c1207211aa1",
       "ground_truth_sha": "f8db8df5b0eff792d3b3c74d8e8f9c1207211aa1",
-      "test_executions": 5,
-      "duration_s": 1.834,
+      "test_executions": 4,
+      "duration_s": 2.123,
       "llm_cost_usd": 0.0
     },
     {
@@ -169,7 +169,7 @@
       "identified_sha": "530f8f7e5beb42b565b73665b096dab00222e0d1",
       "ground_truth_sha": "530f8f7e5beb42b565b73665b096dab00222e0d1",
       "test_executions": 5,
-      "duration_s": 1.751,
+      "duration_s": 2.553,
       "llm_cost_usd": 0.0
     },
     {
@@ -179,7 +179,7 @@
       "identified_sha": "dcf7fbcb9aa11951c203c1f2e848494556a6b20a",
       "ground_truth_sha": "dcf7fbcb9aa11951c203c1f2e848494556a6b20a",
       "test_executions": 4,
-      "duration_s": 1.413,
+      "duration_s": 2.03,
       "llm_cost_usd": 0.0
     },
     {
@@ -189,7 +189,7 @@
       "identified_sha": "0fb2cc233096204f5ddfc96ba93091d7fd0bc922",
       "ground_truth_sha": "0fb2cc233096204f5ddfc96ba93091d7fd0bc922",
       "test_executions": 4,
-      "duration_s": 1.399,
+      "duration_s": 2.006,
       "llm_cost_usd": 0.0
     },
     {
@@ -199,7 +199,7 @@
       "identified_sha": "4daa78e26dc0f76a71ac6ae711e42422500b43ed",
       "ground_truth_sha": "4daa78e26dc0f76a71ac6ae711e42422500b43ed",
       "test_executions": 5,
-      "duration_s": 1.824,
+      "duration_s": 2.544,
       "llm_cost_usd": 0.0
     }
   ],
@@ -211,7 +211,7 @@
       "identified_sha": "e60d7b499d9c595f522e40da41b5868d6adf02b8",
       "ground_truth_sha": "e60d7b499d9c595f522e40da41b5868d6adf02b8",
       "test_executions": 4,
-      "duration_s": 1.482,
+      "duration_s": 2.0,
       "llm_cost_usd": 0.0
     },
     {
@@ -221,7 +221,7 @@
       "identified_sha": "b6bdc817349327e88bc28cccde4647185a3254b0",
       "ground_truth_sha": "b6bdc817349327e88bc28cccde4647185a3254b0",
       "test_executions": 4,
-      "duration_s": 1.363,
+      "duration_s": 2.02,
       "llm_cost_usd": 0.0
     },
     {
@@ -231,7 +231,7 @@
       "identified_sha": "ab4879720966e5f99c43a436587a68a06332875d",
       "ground_truth_sha": "ab4879720966e5f99c43a436587a68a06332875d",
       "test_executions": 4,
-      "duration_s": 1.368,
+      "duration_s": 2.076,
       "llm_cost_usd": 0.0
     },
     {
@@ -241,7 +241,7 @@
       "identified_sha": "d9e9c22aec83ec2e79b0a7185dc66aadf7de873d",
       "ground_truth_sha": "d9e9c22aec83ec2e79b0a7185dc66aadf7de873d",
       "test_executions": 4,
-      "duration_s": 1.362,
+      "duration_s": 2.058,
       "llm_cost_usd": 0.0
     },
     {
@@ -251,17 +251,17 @@
       "identified_sha": "a0e4539e6ca5a07a2568e605698ae0326f8ca71b",
       "ground_truth_sha": "a0e4539e6ca5a07a2568e605698ae0326f8ca71b",
       "test_executions": 4,
-      "duration_s": 1.368,
+      "duration_s": 2.033,
       "llm_cost_usd": 0.0
     },
     {
       "case": "hard_flaky_verify",
       "difficulty": "hard",
-      "correct": true,
-      "identified_sha": "f8db8df5b0eff792d3b3c74d8e8f9c1207211aa1",
+      "correct": false,
+      "identified_sha": "b4508bf236ddeefb8aec2fc53bd5ec097af4acd1",
       "ground_truth_sha": "f8db8df5b0eff792d3b3c74d8e8f9c1207211aa1",
-      "test_executions": 4,
-      "duration_s": 1.452,
+      "test_executions": 3,
+      "duration_s": 1.583,
       "llm_cost_usd": 0.0
     },
     {
@@ -271,7 +271,7 @@
       "identified_sha": "530f8f7e5beb42b565b73665b096dab00222e0d1",
       "ground_truth_sha": "530f8f7e5beb42b565b73665b096dab00222e0d1",
       "test_executions": 4,
-      "duration_s": 1.359,
+      "duration_s": 2.022,
       "llm_cost_usd": 0.0
     },
     {
@@ -281,7 +281,7 @@
       "identified_sha": "dcf7fbcb9aa11951c203c1f2e848494556a6b20a",
       "ground_truth_sha": "dcf7fbcb9aa11951c203c1f2e848494556a6b20a",
       "test_executions": 4,
-      "duration_s": 1.364,
+      "duration_s": 2.03,
       "llm_cost_usd": 0.0
     },
     {
@@ -291,7 +291,7 @@
       "identified_sha": "0fb2cc233096204f5ddfc96ba93091d7fd0bc922",
       "ground_truth_sha": "0fb2cc233096204f5ddfc96ba93091d7fd0bc922",
       "test_executions": 4,
-      "duration_s": 1.359,
+      "duration_s": 2.063,
       "llm_cost_usd": 0.0
     },
     {
@@ -301,7 +301,7 @@
       "identified_sha": "4daa78e26dc0f76a71ac6ae711e42422500b43ed",
       "ground_truth_sha": "4daa78e26dc0f76a71ac6ae711e42422500b43ed",
       "test_executions": 4,
-      "duration_s": 1.39,
+      "duration_s": 1.996,
       "llm_cost_usd": 0.0
     }
   ],
@@ -313,7 +313,7 @@
       "identified_sha": "e60d7b499d9c595f522e40da41b5868d6adf02b8",
       "ground_truth_sha": "e60d7b499d9c595f522e40da41b5868d6adf02b8",
       "test_executions": 10,
-      "duration_s": 3.408,
+      "duration_s": 5.04,
       "llm_cost_usd": 0.0
     },
     {
@@ -323,7 +323,7 @@
       "identified_sha": "b6bdc817349327e88bc28cccde4647185a3254b0",
       "ground_truth_sha": "b6bdc817349327e88bc28cccde4647185a3254b0",
       "test_executions": 10,
-      "duration_s": 3.92,
+      "duration_s": 5.034,
       "llm_cost_usd": 0.0
     },
     {
@@ -333,7 +333,7 @@
       "identified_sha": "ab4879720966e5f99c43a436587a68a06332875d",
       "ground_truth_sha": "ab4879720966e5f99c43a436587a68a06332875d",
       "test_executions": 10,
-      "duration_s": 3.598,
+      "duration_s": 5.044,
       "llm_cost_usd": 0.0
     },
     {
@@ -343,7 +343,7 @@
       "identified_sha": "d9e9c22aec83ec2e79b0a7185dc66aadf7de873d",
       "ground_truth_sha": "d9e9c22aec83ec2e79b0a7185dc66aadf7de873d",
       "test_executions": 10,
-      "duration_s": 3.4,
+      "duration_s": 5.08,
       "llm_cost_usd": 0.0
     },
     {
@@ -353,17 +353,17 @@
       "identified_sha": "a0e4539e6ca5a07a2568e605698ae0326f8ca71b",
       "ground_truth_sha": "a0e4539e6ca5a07a2568e605698ae0326f8ca71b",
       "test_executions": 10,
-      "duration_s": 3.392,
+      "duration_s": 5.077,
       "llm_cost_usd": 0.0
     },
     {
       "case": "hard_flaky_verify",
       "difficulty": "hard",
-      "correct": true,
-      "identified_sha": "f8db8df5b0eff792d3b3c74d8e8f9c1207211aa1",
+      "correct": false,
+      "identified_sha": "b4508bf236ddeefb8aec2fc53bd5ec097af4acd1",
       "ground_truth_sha": "f8db8df5b0eff792d3b3c74d8e8f9c1207211aa1",
-      "test_executions": 33,
-      "duration_s": 11.714,
+      "test_executions": 9,
+      "duration_s": 4.653,
       "llm_cost_usd": 0.0
     },
     {
@@ -373,7 +373,7 @@
       "identified_sha": "530f8f7e5beb42b565b73665b096dab00222e0d1",
       "ground_truth_sha": "530f8f7e5beb42b565b73665b096dab00222e0d1",
       "test_executions": 10,
-      "duration_s": 3.402,
+      "duration_s": 5.556,
       "llm_cost_usd": 0.0
     },
     {
@@ -383,7 +383,7 @@
       "identified_sha": "dcf7fbcb9aa11951c203c1f2e848494556a6b20a",
       "ground_truth_sha": "dcf7fbcb9aa11951c203c1f2e848494556a6b20a",
       "test_executions": 10,
-      "duration_s": 3.505,
+      "duration_s": 4.994,
       "llm_cost_usd": 0.0
     },
     {
@@ -393,7 +393,7 @@
       "identified_sha": "0fb2cc233096204f5ddfc96ba93091d7fd0bc922",
       "ground_truth_sha": "0fb2cc233096204f5ddfc96ba93091d7fd0bc922",
       "test_executions": 10,
-      "duration_s": 3.701,
+      "duration_s": 5.066,
       "llm_cost_usd": 0.0
     },
     {
@@ -403,7 +403,7 @@
       "identified_sha": "4daa78e26dc0f76a71ac6ae711e42422500b43ed",
       "ground_truth_sha": "4daa78e26dc0f76a71ac6ae711e42422500b43ed",
       "test_executions": 10,
-      "duration_s": 3.551,
+      "duration_s": 5.057,
       "llm_cost_usd": 0.0
     }
   ],
@@ -415,8 +415,8 @@
       "identified_sha": "e60d7b499d9c595f522e40da41b5868d6adf02b8",
       "ground_truth_sha": "e60d7b499d9c595f522e40da41b5868d6adf02b8",
       "test_executions": 10,
-      "duration_s": 6.243,
-      "llm_cost_usd": 0.00016534
+      "duration_s": 7.452,
+      "llm_cost_usd": 0.00019404000000000003
     },
     {
       "case": "easy_off_by_one",
@@ -425,8 +425,8 @@
       "identified_sha": "b6bdc817349327e88bc28cccde4647185a3254b0",
       "ground_truth_sha": "b6bdc817349327e88bc28cccde4647185a3254b0",
       "test_executions": 10,
-      "duration_s": 7.14,
-      "llm_cost_usd": 0.00018718
+      "duration_s": 7.296,
+      "llm_cost_usd": 0.00021462000000000003
     },
     {
       "case": "easy_removed_check",
@@ -435,8 +435,8 @@
       "identified_sha": "ab4879720966e5f99c43a436587a68a06332875d",
       "ground_truth_sha": "ab4879720966e5f99c43a436587a68a06332875d",
       "test_executions": 10,
-      "duration_s": 6.1,
-      "llm_cost_usd": 0.00018214
+      "duration_s": 7.704,
+      "llm_cost_usd": 0.00022848000000000004
     },
     {
       "case": "easy_syntax_bug",
@@ -445,8 +445,8 @@
       "identified_sha": "d9e9c22aec83ec2e79b0a7185dc66aadf7de873d",
       "ground_truth_sha": "d9e9c22aec83ec2e79b0a7185dc66aadf7de873d",
       "test_executions": 10,
-      "duration_s": 6.232,
-      "llm_cost_usd": 0.00016142
+      "duration_s": 8.146,
+      "llm_cost_usd": 0.00019012
     },
     {
       "case": "easy_wrong_return",
@@ -455,8 +455,8 @@
       "identified_sha": "a0e4539e6ca5a07a2568e605698ae0326f8ca71b",
       "ground_truth_sha": "a0e4539e6ca5a07a2568e605698ae0326f8ca71b",
       "test_executions": 10,
-      "duration_s": 6.146,
-      "llm_cost_usd": 0.00015694
+      "duration_s": 12.92,
+      "llm_cost_usd": 0.00018858000000000001
     },
     {
       "case": "hard_flaky_verify",
@@ -464,9 +464,9 @@
       "correct": true,
       "identified_sha": "f8db8df5b0eff792d3b3c74d8e8f9c1207211aa1",
       "ground_truth_sha": "f8db8df5b0eff792d3b3c74d8e8f9c1207211aa1",
-      "test_executions": 34,
-      "duration_s": 15.69,
-      "llm_cost_usd": 0.00021238000000000002
+      "test_executions": 33,
+      "duration_s": 15.678,
+      "llm_cost_usd": 0.00023604000000000002
     },
     {
       "case": "hard_misleading_message",
@@ -475,8 +475,8 @@
       "identified_sha": "530f8f7e5beb42b565b73665b096dab00222e0d1",
       "ground_truth_sha": "530f8f7e5beb42b565b73665b096dab00222e0d1",
       "test_executions": 10,
-      "duration_s": 6.069,
-      "llm_cost_usd": 0.00017080000000000003
+      "duration_s": 6.005,
+      "llm_cost_usd": 0.00021336000000000003
     },
     {
       "case": "medium_changed_default",
@@ -485,8 +485,8 @@
       "identified_sha": "dcf7fbcb9aa11951c203c1f2e848494556a6b20a",
       "ground_truth_sha": "dcf7fbcb9aa11951c203c1f2e848494556a6b20a",
       "test_executions": 10,
-      "duration_s": 6.553,
-      "llm_cost_usd": 0.00017556
+      "duration_s": 6.13,
+      "llm_cost_usd": 0.00020888000000000005
     },
     {
       "case": "medium_config_change",
@@ -495,8 +495,8 @@
       "identified_sha": "0fb2cc233096204f5ddfc96ba93091d7fd0bc922",
       "ground_truth_sha": "0fb2cc233096204f5ddfc96ba93091d7fd0bc922",
       "test_executions": 10,
-      "duration_s": 6.185,
-      "llm_cost_usd": 0.0001834
+      "duration_s": 5.992,
+      "llm_cost_usd": 0.00021924
     },
     {
       "case": "medium_shared_helper",
@@ -505,8 +505,8 @@
       "identified_sha": "4daa78e26dc0f76a71ac6ae711e42422500b43ed",
       "ground_truth_sha": "4daa78e26dc0f76a71ac6ae711e42422500b43ed",
       "test_executions": 10,
-      "duration_s": 6.639,
-      "llm_cost_usd": 0.0002338
+      "duration_s": 6.01,
+      "llm_cost_usd": 0.00026628000000000003
     }
   ]
 }

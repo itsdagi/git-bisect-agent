@@ -59,9 +59,28 @@ bisect_agent.py run --repo <path> --good <sha> --bad <sha> --test-cmd "..."
    confident. (This backtrack step is the one substantive fix that came out
    of running the hard fixture — see `CHANGELOG.md`.)
 4. Explain: fetch the diff and commit message for the confirmed commit, ask
-   the model for a plain-language root cause grounded in that diff and the
-   actual captured test output. A post-hoc check flags the explanation if it
-   references a file that never appears in the diff.
+   the model for a **causal chain** — code change -> immediate effect ->
+   propagation -> assertion failure — not just a flat "commit X broke it"
+   sentence, grounded in that diff and the actual captured test output. A
+   post-hoc check flags the whole chain if it references a file that never
+   appears in the diff. Rendered as an arrow diagram in the CLI and every
+   trajectory file, e.g. (from `medium_shared_helper`, where the bug is in
+   a helper the tested function calls, not in its own diff):
+   ```
+   Removed the `if x < lo: return lo` branch from clamp()
+      |
+      v
+   clamp() now returns x unchanged when x is below lo
+      |
+      v
+   format_price(-10) calls clamp(-10, 0, 100) and gets -10
+      |
+      v
+   format_price returns '$-10.00' instead of '$0.00'
+      |
+      v
+   test_format_price_clamps_low asserts '$0.00' but receives '$-10.00'
+   ```
 
 Every tool call — input, result, and the orchestrator's next decision — is
 logged to a structured JSONL file per run (`agent/trajectory.py`), rendered
@@ -104,11 +123,16 @@ Model used for the numbers in this repo: `deepseek-chat`.
 
 | Stage | Accuracy | Avg test executions/case | Avg wall time/case (s) | Avg LLM cost/case ($) |
 |---|---|---|---|---|
-| baseline (guess from vibes) | 60% (6/10) | 0.0 | 1.92 | 0.00007 |
-| iteration 1: linear scan | 90% (9/10) | 4.5 | 1.63 | 0.00000 |
-| iteration 2: binary search | 100% (10/10) | 4.0 | 1.39 | 0.00000 |
-| iteration 3: + verify() | 100% (10/10) | 12.3 | 4.36 | 0.00000 |
-| final: + explain() | 100% (10/10) | 12.4 | 7.30 | 0.00018 |
+| baseline (guess from vibes) | 60% (6/10) | 0.0 | 1.87 | 0.0001 |
+| iteration 1: linear scan | 100% (10/10) | 4.4 | 2.28 | 0.0000 |
+| iteration 2: binary search | 90% (9/10) | 3.9 | 1.99 | 0.0000 |
+| iteration 3: + verify() | 90% (9/10) | 9.9 | 5.06 | 0.0000 |
+| final: + explain() (causal chain) | 100% (10/10) | 12.3 | 8.33 | 0.0002 |
+
+Per-stage accuracy on `hard_flaky_verify` (the deliberately flaky fixture)
+varies a few points run to run by design — see `eval/results.md`'s hard-case
+section for why that's the honest outcome of a coin-flip test and a bounded
+mitigation, not a bug.
 
 Full per-case breakdown, the hard-case writeup, and a hot take on what it
 revealed: [`eval/results.md`](eval/results.md). Build-stage-by-stage
@@ -149,7 +173,9 @@ fixtures/
   cases/<name>/meta.json   ground truth SHAs, difficulty, test command
 eval/
   run_eval.py              drives every stage across all fixtures
-  results.md               the comparison table + hard-case writeup
+  results.md               auto-generated tables + persisted narrative (below)
+  _narrative.md            hard-case writeup + hot take, appended to results.md
+                           on every eval run so it survives reruns
   raw_results.json          machine-readable per-case results
 trajectories/              one rendered trajectory per representative case
 CHANGELOG.md               stage-by-stage build log with real evidence

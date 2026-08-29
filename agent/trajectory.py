@@ -40,6 +40,14 @@ class TrajectoryLogger:
                     lines.append(f"### [{t}s] tool_call: `{rec['tool']}`")
                     lines.append(f"input: `{json.dumps(rec['input'])}`")
                     result = rec.get("result")
+                    if rec["tool"] == "explain" and isinstance(result, dict) and result.get("causal_chain"):
+                        from .tools import render_causal_chain
+                        lines.append("chain of failure:")
+                        lines.append(f"```\n{render_causal_chain(result['causal_chain'])}\n```")
+                        lines.append(f"summary: {result.get('explanation', '')}")
+                        if result.get("ungrounded"):
+                            lines.append(f"**flagged ungrounded:** {result.get('flag_reason')}")
+                        lines.append("")
                     result_str = json.dumps(result, indent=2) if isinstance(result, (dict, list)) else str(result)
                     if len(result_str) > 2000:
                         result_str = result_str[:2000] + "\n... (truncated)"

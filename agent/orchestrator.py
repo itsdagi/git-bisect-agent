@@ -152,6 +152,11 @@ def run_agent(
         llm_output_tokens += explain_result["usage"]["output_tokens"]
         if explain_result["ungrounded"]:
             logger.log("decision", note=f"explain() flagged as ungrounded: {explain_result['flag_reason']}")
+        else:
+            logger.log("decision", note=(
+                "explain() produced a "
+                f"{len(explain_result['causal_chain'])}-step grounded causal chain"
+            ))
 
     duration = time.time() - t_start
     result = {
