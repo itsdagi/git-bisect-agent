@@ -30,7 +30,7 @@ def cmd_run(args):
         result = run_agent(
             client, args.repo, args.good, args.bad, args.test_cmd, logger,
             strategy=args.strategy, do_verify=not args.no_verify, do_explain=not args.no_explain,
-            model=args.model,
+            do_memory=args.memory, model=args.model,
         )
     finally:
         logger.close()
@@ -43,6 +43,10 @@ def cmd_run(args):
         print(render_causal_chain(result["explain_result"]["causal_chain"]))
         print("\n--- summary ---")
         print(result["explain_result"]["explanation"])
+        if result["explain_result"].get("history_note"):
+            print(f"\n[memory] {result['explain_result']['history_note']}")
+        if result["explain_result"].get("root_cause_tag"):
+            print(f"\n[root cause tag: {result['explain_result']['root_cause_tag']}]")
         if result["explain_result"]["ungrounded"]:
             print(f"\n[FLAGGED UNGROUNDED] {result['explain_result']['flag_reason']}")
     print(f"\ntrajectory written to {log_path}")
@@ -74,6 +78,10 @@ def main():
     p_run.add_argument("--strategy", choices=["linear", "binary"], default="binary")
     p_run.add_argument("--no-verify", action="store_true")
     p_run.add_argument("--no-explain", action="store_true")
+    p_run.add_argument("--memory", action="store_true",
+                        help="Enable cross-run memory: query .bisect-agent/history.jsonl for prior "
+                             "regressions touching the same files, and append this run to it. "
+                             "Off by default -- narrows/influences explain()'s narration only, never diagnosis.")
     p_run.add_argument("--model", default=DEFAULT_MODEL)
     p_run.set_defaults(func=cmd_run)
 

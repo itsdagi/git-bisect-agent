@@ -131,9 +131,13 @@ def main():
     client = get_client()
     logger = TrajectoryLogger(OUTPUT_DIR / "trajectory.jsonl")
     try:
+        # do_memory=False: GitHub Actions runners are ephemeral, so
+        # .bisect-agent/history.jsonl wouldn't survive between runs without
+        # extra wiring (actions/cache or a bot commit) -- deliberately not
+        # built here, see README.md's "future work" note.
         result = run_agent(
             client, args.repo_path, args.base_sha, args.head_sha, test_cmd, logger,
-            strategy="binary", do_verify=True, do_explain=True, model=args.model,
+            strategy="binary", do_verify=True, do_explain=True, do_memory=False, model=args.model,
         )
     finally:
         logger.close()

@@ -9,7 +9,12 @@ order:
   - "binary": real binary-search narrowing via narrow_range(). (Iteration 2+.)
 
 `do_verify` and `do_explain` gate iterations 3 and 4/5 respectively so the
-eval harness can run every stage and compare them head to head.
+eval harness can run every stage and compare them head to head. `do_memory`
+(default off, so it never contaminates the accuracy eval suite) gates
+cross-run memory: query_history() is only ever called after verify() has
+confirmed a candidate, and its output only reaches explain()'s narration --
+see agent/memory.py for the constraint that memory never influences which
+commit gets identified.
 """
 import time
 
@@ -41,6 +46,7 @@ def run_agent(
     strategy="binary",
     do_verify=True,
     do_explain=True,
+    do_memory=False,
     model=DEFAULT_MODEL,
     verify_reruns=3,
 ):
@@ -165,14 +171,40 @@ def run_agent(
             r = call_tool("run_test", tools.run_test, repo=repo, sha=final_sha, test_cmd=test_cmd)
             test_output = r["output"]
 
+        history_context = None
+        touched_files = []
+        if do_memory:
+            touched_files = list(tools.diff_touched_files(diff["diff"]))
+            history_matches = call_tool("query_history", tools.query_history,
+                                         repo=repo, files_touched=touched_files)
+            if history_matches:
+                logger.log("decision", note=(
+                    f"query_history() found {len(history_matches)} prior regression(s) "
+                    f"touching {touched_files} -- will inform explain()'s narration only, "
+                    f"not the identified commit (already fixed by verify() above)"
+                ))
+                from .memory import format_history_context
+                history_context = format_history_context(history_matches)
+            else:
+                logger.log("decision", note=f"query_history() found no prior regressions touching {touched_files}")
+
         logger.log("tool_call_start", tool="explain", input={"sha": final_sha})
         explain_result = tools.explain(
             client, model, diff["diff"], test_output, commit_msg["subject"],
-            confidence=confidence,
+            confidence=confidence, history_context=history_context,
         )
         logger.log("tool_call", tool="explain", input={"sha": final_sha}, result=explain_result)
         llm_input_tokens += explain_result["usage"]["input_tokens"]
         llm_output_tokens += explain_result["usage"]["output_tokens"]
+
+        if do_memory:
+            record = call_tool("record_history", tools.record_history,
+                                repo=repo, good_sha=good_sha, bad_sha=bad_sha, culprit_sha=final_sha,
+                                files_touched=touched_files,
+                                root_cause_tag=explain_result.get("root_cause_tag"),
+                                summary=explain_result.get("explanation"))
+            logger.log("decision", note=f"recorded this run to history: tag={record['root_cause_tag']}")
+
         if explain_result["ungrounded"]:
             logger.log("decision", note=f"explain() flagged as ungrounded: {explain_result['flag_reason']}")
         else:

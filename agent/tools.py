@@ -1,12 +1,17 @@
 """
-The six discrete, loggable tools the agent uses. Every call is written to
+The discrete, loggable tools the agent uses. Every call is written to
 the TrajectoryLogger by the orchestrator, not inside these functions --
 that keeps the tools themselves simple, synchronous, and unit-testable.
+
+Core six: run_test, get_diff, get_commit_message, narrow_range, verify,
+explain. query_history/record_history (agent/memory.py) are an additive
+memory layer -- see that module's docstring for the constraint that memory
+never influences diagnosis, only explanation.
 """
 import subprocess
 import time
 
-from . import git_utils
+from . import git_utils, memory
 
 
 def run_test(repo, sha, test_cmd, timeout=60):
@@ -95,6 +100,24 @@ def _diff_touched_files(diff_text):
     return files
 
 
+# Public alias -- used by the orchestrator too, to derive files_touched for
+# query_history()/record_history() without duplicating the diff-parsing logic.
+diff_touched_files = _diff_touched_files
+
+
+def query_history(repo, files_touched):
+    """Looks up prior confirmed regressions in this repo that touched the
+    same file(s). MUST only be called after verify() has confirmed a
+    culprit -- see agent/memory.py's module docstring for why."""
+    return memory.query_history(repo, files_touched)
+
+
+def record_history(repo, good_sha, bad_sha, culprit_sha, files_touched, root_cause_tag, summary):
+    """Appends this run's confirmed result to the local history log, for
+    future runs' query_history() to find."""
+    return memory.record_history(repo, good_sha, bad_sha, culprit_sha, files_touched, root_cause_tag, summary)
+
+
 def explain(client, model, diff_text, test_output, commit_message, max_tokens=700,
             confidence=None, history_context=None):
     """Calls the LLM to produce a root-cause explanation, grounded strictly
@@ -122,12 +145,14 @@ actually supports.
         history_block = f"""
 Prior regressions in this repository that touched the same file(s)/function(s)
 (from `.bisect-agent/history.jsonl`, for context only -- this does NOT change
-which commit is the culprit, it only informs how you frame the explanation):
+which commit is the culprit, it only affects the optional "history_note"
+field below):
 {history_context}
 
-If relevant, note the pattern in your summary (e.g. "this is the Nth time
-this area has broken this way"). Do not let this history override or
-contradict what the diff and test output actually show.
+Compare each prior entry's tag/summary to the bug you're looking at now.
+Fill in "history_note" (see JSON shape below) if -- and only if -- at least
+one prior entry is genuinely the same class of bug. Never let history
+override or contradict what the diff and test output actually show.
 """
 
     prompt = f"""You are explaining why a specific git commit broke a test. You must ground your explanation ONLY in the diff and test output below -- never invent a cause you cannot point to in the diff.
@@ -148,7 +173,9 @@ Failing test output (captured from actually running the test suite at this commi
 Respond with ONLY a JSON object of this exact shape:
 {{
   "causal_chain": ["<step 1>", "<step 2>", "...", "<final step>"],
-  "summary": "<1-3 sentence plain-language root cause>"
+  "summary": "<1-3 sentence plain-language root cause>",
+  "root_cause_tag": "<short-kebab-case-tag>",
+  "history_note": "<null, or if a prior entry above is genuinely the same bug class: one concrete sentence naming what repeated and where, e.g. 'This is the second missing-null-check regression in this repo; the first was in get_user_email.'>"
 }}
 
 Rules for causal_chain:
@@ -162,6 +189,12 @@ Rules for causal_chain:
 - Do not invent an intermediate step you can't ground in the diff or test
   output -- a shorter, honest chain beats a longer invented one.
 - Do not reference any file or function that does not appear in the diff.
+
+Rules for root_cause_tag: a short (2-4 word) kebab-case classification of
+the bug *class*, not this specific instance -- e.g. "missing-null-check",
+"off-by-one", "dependency-bump", "config-default-change", "flipped-comparison".
+This gets stored so future runs on this repo can recognize a repeat of the
+same bug class; pick a tag general enough to match a similar future bug.
 """
     resp = client.messages.create(
         model=model,
@@ -174,11 +207,16 @@ Rules for causal_chain:
     import re
     causal_chain = []
     summary = raw_text
+    root_cause_tag = None
+    history_note = None
     try:
         match = re.search(r"\{.*\}", raw_text, re.DOTALL)
         parsed = json.loads(match.group(0))
         causal_chain = [str(s).strip() for s in parsed.get("causal_chain", []) if str(s).strip()]
         summary = str(parsed.get("summary", "")).strip() or raw_text
+        root_cause_tag = str(parsed.get("root_cause_tag", "")).strip() or None
+        note_raw = parsed.get("history_note")
+        history_note = str(note_raw).strip() if note_raw and str(note_raw).lower() != "null" else None
     except Exception:
         pass  # fall back to raw_text as the summary, empty chain
 
@@ -201,6 +239,8 @@ Rules for causal_chain:
     return {
         "explanation": summary,
         "causal_chain": causal_chain,
+        "root_cause_tag": root_cause_tag,
+        "history_note": history_note,
         "raw_response": raw_text,
         "ungrounded": ungrounded,
         "flag_reason": flag_reason,
