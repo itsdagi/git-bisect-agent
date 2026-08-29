@@ -17,6 +17,20 @@ from . import git_utils, tools
 from .llm import DEFAULT_MODEL, cost_usd
 
 
+def _compute_confidence(do_verify, verify_confirmed, verify_attempts_used, any_flaky):
+    """High = verify() confirmed on the first pass, cleanly. Medium =
+    confirmed, but only after backtracking/resampling or with some flaky
+    signal along the way. Low = verify() never cleanly confirmed the
+    candidate. Unverified = do_verify was disabled entirely (no signal)."""
+    if not do_verify:
+        return "Unverified"
+    if not verify_confirmed:
+        return "Low"
+    if verify_attempts_used == 1 and not any_flaky:
+        return "High"
+    return "Medium"
+
+
 def run_agent(
     client,
     repo,
@@ -88,14 +102,18 @@ def run_agent(
     verify_result = None
     final_sha = candidate_sha
     max_backtrack = 3
+    verify_attempts_used = 0
+    any_flaky = False
     if do_verify:
         current = candidate_sha
         reruns = verify_reruns
         for attempt in range(max_backtrack + 1):
+            verify_attempts_used = attempt + 1
             verify_result = call_tool("verify", tools.verify, repo=repo, candidate_sha=current,
                                        test_cmd=test_cmd, reruns=reruns)
             test_executions += reruns * 2  # verify() internally runs candidate + parent, `reruns` times each
             if verify_result["flaky"]:
+                any_flaky = True
                 logger.log("decision", note=(
                     f"verify() saw inconsistent results for {current[:10]} (candidate_fail_rate="
                     f"{verify_result['candidate_fail_rate']:.2f}, parent_pass_rate="
@@ -131,6 +149,10 @@ def run_agent(
             ))
             final_sha = current
 
+    confidence = _compute_confidence(
+        do_verify, bool(verify_result and verify_result["confirmed"]), verify_attempts_used, any_flaky,
+    )
+
     explain_result = None
     if do_explain:
         diff = call_tool("get_diff", tools.get_diff, repo=repo, sha=final_sha)
@@ -146,6 +168,7 @@ def run_agent(
         logger.log("tool_call_start", tool="explain", input={"sha": final_sha})
         explain_result = tools.explain(
             client, model, diff["diff"], test_output, commit_msg["subject"],
+            confidence=confidence,
         )
         logger.log("tool_call", tool="explain", input={"sha": final_sha}, result=explain_result)
         llm_input_tokens += explain_result["usage"]["input_tokens"]
@@ -161,6 +184,7 @@ def run_agent(
     duration = time.time() - t_start
     result = {
         "identified_sha": final_sha,
+        "confidence": confidence,
         "verify_result": verify_result,
         "explain_result": explain_result,
         "test_executions": test_executions,

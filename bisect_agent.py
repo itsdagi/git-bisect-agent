@@ -38,6 +38,7 @@ def cmd_run(args):
     print(json.dumps({k: v for k, v in result.items() if k not in ("verify_result", "explain_result")}, indent=2))
     if result["explain_result"]:
         from agent.tools import render_causal_chain
+        print(f"\n--- confidence: {result['confidence']} ---")
         print("\n--- chain of failure ---")
         print(render_causal_chain(result["explain_result"]["causal_chain"]))
         print("\n--- summary ---")

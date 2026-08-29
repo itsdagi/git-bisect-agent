@@ -1,0 +1,147 @@
+name: Bisect Agent
+
+# Reusable/copyable into any repo. Two ways to fire:
+#
+#   1. workflow_run: automatically, whenever the repo's own test workflow
+#      (named "Tests" below -- change `workflows:` to match yours) finishes
+#      with conclusion "failure" on a PR. This is the automatic path: no
+#      human has to invoke the agent manually.
+#
+#   2. workflow_dispatch: manual trigger from the Actions tab, with explicit
+#      base_sha/head_sha/pr_number inputs. This is how you demo it and how a
+#      judge reproduces it without needing to orchestrate a real failing PR
+#      first -- just paste the two commit SHAs from the demo fixture and,
+#      optionally, the PR number to comment on.
+#
+# To copy this into your own repo: copy this file plus a `.bisect-agent.yml`
+# at your repo root (test_cmd + optional path_filters, see README.md). You
+# do NOT need to vendor the agent/ or ci/ Python packages -- the second
+# checkout step below pulls the actual bisect-agent tool code from its own
+# repo at run time, pinned to BISECT_AGENT_REF. Nothing else changes.
+#
+# GROUND RULE: this workflow only ever reads the repos it checks out and
+# posts/edits a single issue (PR) comment. It never pushes a commit, merges,
+# reverts, or otherwise modifies the PR or repo -- see the `permissions:`
+# block below, which grants nothing beyond that. It is informational only,
+# which is why it doesn't need a separate human-approval gate: it can't take
+# a consequential action even if it wanted to.
+
+on:
+  workflow_run:
+    workflows: ["Tests"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to comment on (leave blank for a dry run: results are computed and uploaded as an artifact, but no comment is posted)"
+        required: false
+      base_sha:
+        description: "Known-good commit SHA (start of the bisect range)"
+        required: true
+      head_sha:
+        description: "Known-bad commit SHA (end of the bisect range, e.g. the PR's current head)"
+        required: true
+      test_cmd_override:
+        description: "Override the test_cmd from .bisect-agent.yml (optional)"
+        required: false
+
+env:
+  # The tool repo to pull agent/ and ci/ from. Leave as-is when copying this
+  # workflow into your own project -- it should keep pointing at the
+  # upstream Bisect Agent repo, not your project's own repo.
+  BISECT_AGENT_REPO: itsdagi/git-bisect-agent
+  BISECT_AGENT_REF: main
+
+permissions:
+  contents: read         # checkout only -- never contents:write, this workflow never commits anything
+  pull-requests: write   # to post/update the PR comment
+  issues: write           # PR comments are issue comments in the GitHub API
+
+jobs:
+  bisect:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout Bisect Agent tool
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BISECT_AGENT_REPO }}
+          ref: ${{ env.BISECT_AGENT_REF }}
+          path: _bisect_agent_tool
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Bisect Agent dependencies
+        run: pip install -r _bisect_agent_tool/requirements.txt
+
+      - name: Resolve PR context
+        id: ctx
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, sys
+
+          event_name = os.environ["GITHUB_EVENT_NAME"]
+          with open(os.environ["GITHUB_EVENT_PATH"]) as f:
+              event = json.load(f)
+
+          if event_name == "workflow_dispatch":
+              inputs = event.get("inputs", {})
+              pr_number = inputs.get("pr_number") or ""
+              base_sha = inputs["base_sha"]
+              head_sha = inputs["head_sha"]
+              test_cmd_override = inputs.get("test_cmd_override") or ""
+          else:
+              sys.path.insert(0, os.path.join(os.getcwd(), "_bisect_agent_tool"))
+              from ci.github_api import get_pr_for_workflow_run
+              token = os.environ["GITHUB_TOKEN"]
+              repo = os.environ["GITHUB_REPOSITORY"]
+              pr_number, base_sha, head_sha = get_pr_for_workflow_run(repo, event["workflow_run"], token)
+              pr_number = pr_number or ""
+              test_cmd_override = ""
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"pr_number={pr_number}\n")
+              out.write(f"base_sha={base_sha}\n")
+              out.write(f"head_sha={head_sha}\n")
+              out.write(f"test_cmd_override={test_cmd_override}\n")
+          PYEOF
+
+      - name: Run Bisect Agent and post PR comment
+        if: steps.ctx.outputs.base_sha != '' && steps.ctx.outputs.head_sha != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ARGS=(
+            --repo-path .
+            --repo-full-name "${{ github.repository }}"
+            --base-sha "${{ steps.ctx.outputs.base_sha }}"
+            --head-sha "${{ steps.ctx.outputs.head_sha }}"
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          )
+          if [ -n "${{ steps.ctx.outputs.pr_number }}" ]; then
+            ARGS+=(--pr-number "${{ steps.ctx.outputs.pr_number }}")
+          fi
+          if [ -n "${{ steps.ctx.outputs.test_cmd_override }}" ]; then
+            ARGS+=(--test-cmd-override "${{ steps.ctx.outputs.test_cmd_override }}")
+          fi
+          python3 _bisect_agent_tool/ci/post_comment.py "${ARGS[@]}"
+
+      - name: Upload trajectory artifact
+        if: always() && steps.ctx.outputs.base_sha != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: bisect-agent-trajectory
+          path: bisect-agent-output/
+          if-no-files-found: ignore

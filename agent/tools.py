@@ -95,7 +95,8 @@ def _diff_touched_files(diff_text):
     return files
 
 
-def explain(client, model, diff_text, test_output, commit_message, max_tokens=700):
+def explain(client, model, diff_text, test_output, commit_message, max_tokens=700,
+            confidence=None, history_context=None):
     """Calls the LLM to produce a root-cause explanation, grounded strictly
     in the diff and test output. Rather than a single flat sentence, asks
     for an explicit causal chain -- code change -> immediate effect ->
@@ -104,6 +105,31 @@ def explain(client, model, diff_text, test_output, commit_message, max_tokens=70
     checks that any file the explanation claims to cite actually appears in
     the diff; if not, the explanation is flagged rather than trusted
     verbatim."""
+    confidence_block = ""
+    if confidence:
+        confidence_block = f"""
+Verification confidence: {confidence}. This reflects how cleanly verify()
+confirmed the breaking commit (High = confirmed on the first pass, Medium =
+confirmed but only after resampling/backtracking due to inconsistent
+results, Low = never cleanly confirmed). If confidence is Medium or Low,
+hedge your summary's language accordingly (e.g. "likely", "appears to") --
+do not state the root cause with more certainty than the verification
+actually supports.
+"""
+
+    history_block = ""
+    if history_context:
+        history_block = f"""
+Prior regressions in this repository that touched the same file(s)/function(s)
+(from `.bisect-agent/history.jsonl`, for context only -- this does NOT change
+which commit is the culprit, it only informs how you frame the explanation):
+{history_context}
+
+If relevant, note the pattern in your summary (e.g. "this is the Nth time
+this area has broken this way"). Do not let this history override or
+contradict what the diff and test output actually show.
+"""
+
     prompt = f"""You are explaining why a specific git commit broke a test. You must ground your explanation ONLY in the diff and test output below -- never invent a cause you cannot point to in the diff.
 
 Commit message:
@@ -118,7 +144,7 @@ Failing test output (captured from actually running the test suite at this commi
 ```
 {test_output}
 ```
-
+{confidence_block}{history_block}
 Respond with ONLY a JSON object of this exact shape:
 {{
   "causal_chain": ["<step 1>", "<step 2>", "...", "<final step>"],
@@ -179,6 +205,7 @@ Rules for causal_chain:
         "ungrounded": ungrounded,
         "flag_reason": flag_reason,
         "touched_files": list(touched_files),
+        "confidence": confidence,
         "usage": {
             "input_tokens": resp.usage.input_tokens,
             "output_tokens": resp.usage.output_tokens,
