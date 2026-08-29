@@ -138,3 +138,93 @@ directly by the user mid-build as a way to make the final answer legible as
 reasoning rather than a lookup result — the causal chain is what actually
 turns this from "a Git tool" into a debugging tool, per the brief's own
 framing.
+
+---
+
+### Extension 1 — CI integration: no human invokes the CLI
+
+**What & why:** the whole pipeline was still something a human had to
+remember to run manually. Added `.github/workflows/bisect-agent.yml`
+(fires on a failing test workflow via `workflow_run`, or manually via
+`workflow_dispatch`) and `ci/post_comment.py`, which reuses
+`agent.orchestrator.run_agent` unchanged — no bisect logic was
+duplicated — and posts/updates a single PR comment (culprit, confidence,
+causal chain, collapsed trajectory). Also added a `confidence` field
+(High/Medium/Low/Unverified) to `explain()`'s output, computed from how
+cleanly `verify()` confirmed the candidate, surfaced in both the CLI and
+the PR comment.
+
+**Evidence:** went fully live — created
+[itsdagi/git-bisect-agent](https://github.com/itsdagi/git-bisect-agent) (this
+repo) and a separate demo fixture repo,
+[itsdagi/bisect-agent-ci-demo](https://github.com/itsdagi/bisect-agent-ci-demo),
+with a real injected bug (`clamp()` loses its lower-bound check) on a PR
+against `main`. Opening that PR made its `Tests` workflow fail, which
+triggered `Bisect Agent` automatically. The real, live comment it posted:
+[PR #1, comment](https://github.com/itsdagi/bisect-agent-ci-demo/pull/1#issuecomment-5461903445)
+— culprit commit `0075704f` (the actual injected bug), **High** confidence,
+a 5-step causal chain, 9 test executions, full trajectory attached both
+inline (collapsed) and as a workflow artifact.
+
+The first live run surfaced a real bug worth recording: the CI runner only
+has the bisect-agent *tool's* own deps installed (`anthropic`, `pyyaml`),
+not the target repo's -- so every `run_test()` call failed identically with
+"no module named pytest", and the agent correctly but uselessly reported
+*that* as the culprit instead of the actual regression. Fixed by adding an
+optional `setup_cmd` to `.bisect-agent.yml` (e.g. `pip install pytest`),
+run once before bisecting starts. The comment above is from the corrected
+run, after that fix landed.
+
+**Decision:** Kept. `setup_cmd` config option kept as a permanent, documented
+part of `.bisect-agent.yml` (not a one-off patch) since any real target repo
+will hit the same gap. CI-persisted memory (writing `.bisect-agent/history.jsonl`
+back via a bot commit or `actions/cache` so it survives ephemeral runners)
+explicitly NOT built — see README.md's "future work" note; the CI workflow
+runs with `do_memory=False`.
+
+---
+
+### Extension 2 — Cross-run memory: explanations reference prior regressions
+
+**What & why:** even a grounded, causal explanation restarts from zero every
+run. Added `agent/memory.py` (append-only `.bisect-agent/history.jsonl` per
+repo) and two tools: `query_history(files_touched)`, called **only after**
+`verify()` has confirmed a culprit — `narrow_range()`, `run_test()`, and
+`verify()` have no knowledge memory exists, so diagnosis stays 100% grounded
+in actual execution — and `record_history(...)`, which appends the
+confirmed result. `explain()` gained a `root_cause_tag` field (a short
+freeform classification like `missing-null-check`) and an optional
+`history_note` field, populated only when a prior entry is genuinely the
+same bug class. Off by default (`do_memory=False`) so it never touches the
+existing 10-fixture accuracy suite; opt in via `bisect_agent.py run --memory`.
+
+**Evidence:** built `fixtures/cases/memory_repeat_bug/` specifically for
+this — one repo, the same "missing-null-check" bug class introduced twice
+at two different points in its history, in two different functions
+(`get_user_email`, then later `get_user_phone`). Ran the agent twice via
+`eval/demo_memory.py`, in order, against the same repo:
+- Run 1 (cold history): identified the `get_user_email` regression
+  correctly, tagged `missing-null-check`, `history_note: null`.
+- Run 2 (run 1's entry now in history): identified the `get_user_phone`
+  regression correctly (diagnosis unaffected, same pipeline), tagged
+  `missing-null-check`, and **`history_note`: "This is the second
+  missing-null-check regression in this repo; the first was in
+  get_user_email."**
+
+Full output for both runs: `eval/memory_demo.md`.
+
+One iteration was needed to get here: the first prompt design asked the
+model to weave the callback into free prose ("if relevant, mention this in
+your summary"), and it silently didn't — both runs independently assigned
+the same `root_cause_tag` (a good sign the tag itself is meaningful) but
+run 2's prose never explicitly named run 1. Fix: moved the callback out of
+prose entirely into its own required-or-null structured JSON field
+(`history_note`), which the model reliably fills in when a prior entry
+actually matches and reliably leaves `null` when it doesn't invent a false
+connection.
+
+**Decision:** Kept. Structured `history_note` field over prose narration —
+the model complies with "fill in this field or leave it null" far more
+reliably than "mention this if relevant" buried in a paragraph. CI
+persistence (surviving ephemeral runners) explicitly deferred, see
+README.md.

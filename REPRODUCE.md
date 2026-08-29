@@ -118,3 +118,83 @@ Every fixture's ground truth is the exact commit SHA
 `fixtures/generate_fixtures.py` injected the bug at
 (`meta.json`'s `ground_truth_bug_sha`). Scoring is exact SHA match — no
 subjective judgment.
+
+## CI integration: see a real PR comment
+
+`.github/workflows/bisect-agent.yml` fires automatically whenever a repo's
+own test workflow fails on a PR, or manually via `workflow_dispatch`. Live
+demo, reproducible by a judge without needing to set anything up:
+
+**Fastest path — read the existing live demo:**
+[itsdagi/bisect-agent-ci-demo#1](https://github.com/itsdagi/bisect-agent-ci-demo/pull/1)
+is a real, already-open PR with an injected bug (`clamp()` loses its
+lower-bound check). Its `Tests` check failed, which triggered
+`Bisect Agent` automatically, which posted a real comment on the PR —
+culprit commit, confidence, causal chain of failure, and a collapsed
+trajectory log. No setup required, just open the PR and read the comment.
+
+**Reproduce it yourself from a clean fork:**
+
+```bash
+gh repo fork itsdagi/bisect-agent-ci-demo --clone
+cd bisect-agent-ci-demo
+gh secret set DEEPSEEK_API_KEY   # paste your own key (or ANTHROPIC_API_KEY)
+```
+
+Then either:
+- **Automatic path**: open a PR from `add-perf-tweak` into `main` in your
+  fork (`gh pr create --base main --head add-perf-tweak`). The `Tests`
+  workflow fails on the injected bug, which triggers `Bisect Agent`
+  automatically -- watch the Actions tab, then check the PR for the
+  comment (usually posts within ~30-60s of the test failure).
+- **Manual path** (what judges should use to reproduce without waiting on
+  a real failure): from the Actions tab, run `Bisect Agent` ->
+  `Run workflow`, filling in:
+  - `base_sha`: the `main` branch tip (a passing commit)
+  - `head_sha`: the `add-perf-tweak` branch tip (the injected bug)
+  - `pr_number`: leave blank for a dry run (results computed and uploaded
+    as a workflow artifact, no comment posted), or fill in an open PR
+    number to post/update a real comment
+
+Expected: within ~1-2 minutes, a comment appears (or updates in place, if
+one already exists on that PR — reruns don't stack duplicates) naming the
+`perf: short-circuit clamp() for the common case` commit as the culprit,
+High confidence, a 4-5 step causal chain showing the removed lower-bound
+check propagating to the specific failing assertion, and a collapsed
+trajectory log. The full trajectory JSON is also uploaded as a workflow
+artifact (`bisect-agent-trajectory`) on that run.
+
+**Copying this into your own repo:** copy `.github/workflows/bisect-agent.yml`
+and add a `.bisect-agent.yml` at your repo root:
+
+```yaml
+test_cmd: "python -m pytest -q"
+setup_cmd: "pip install -r requirements.txt"   # optional: installs YOUR test deps
+path_filters:                                    # optional
+  - "src/**"
+```
+
+You do not need to vendor `agent/` or `ci/` — the workflow's second
+checkout step pulls those from `itsdagi/git-bisect-agent` at run time,
+pinned to `BISECT_AGENT_REF` (default `main`) at the top of the workflow
+file. Also rename `workflows: ["Tests"]` in the `workflow_run:` trigger to
+match your own test workflow's `name:`.
+
+Runtime: ~1-2 min per run (checkout + narrowing + verify + explain).
+Cost: same as a local `run` — a few hundredths of a cent per PR.
+
+## Cross-run memory demo
+
+```bash
+cd fixtures && python3 generate_memory_fixture.py && cd ..
+python3 eval/demo_memory.py
+```
+
+Expected: prints both runs' identification + explanation, writes
+`eval/memory_demo.md`, and ends with `run1_correct=True run2_correct=True
+references_history=True`. Run 2's printed explanation should name the prior
+regression explicitly (e.g. "This is the second missing-null-check
+regression..."). Runtime: ~15-20s, two `explain()` calls (~$0.0005 total).
+
+To try it manually against your own repo: `bisect_agent.py run --memory`
+enables the same behavior against any repo/range.
