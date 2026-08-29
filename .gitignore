@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+trajectories/_scratch_*
+.claude/
+fixtures/cases/
