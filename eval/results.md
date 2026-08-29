@@ -2,6 +2,16 @@
 
 Fixture suite: 10 cases (5 easy, 3 medium, 2 hard).
 
+## Baseline vs. agent (primary comparison)
+
+| Metric | Simple baseline | Agent solution | Change |
+|---|---|---|---|
+| Primary outcome (exact-SHA accuracy) | 60% (6/10) | 100% (10/10) | +40 points |
+| Human time per task | N/A -- fully automated, no human runs either path | N/A -- fully automated | not applicable; test executions (0 -> 12.3 avg/case) is the closest proxy for effort spent |
+| Cost per task | $0.00007 (one short prompt, no diff/test data) | $0.00022 (narrowing + verify make 0 LLM calls; cost is entirely the one explain() call) | +$0.00015, and buys a correct, grounded, causally-explained answer instead of a guess |
+
+*(Format per the hackathon brief's evaluation guide. "Human time per task" doesn't apply here -- both the baseline and the agent are fully automated end to end, which is the point: nobody is bisecting by hand either way. Test executions and wall time are the more meaningful effort proxy, reported in full below.)*
+
 ## Summary
 
 | Stage | Accuracy | Avg test executions | Avg wall time (s) | Avg LLM cost/case ($) |

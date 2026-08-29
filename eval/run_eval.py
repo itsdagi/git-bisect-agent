@@ -34,9 +34,14 @@ STAGE_CONFIG = {
 
 
 def load_cases():
+    """The 10 single-range accuracy fixtures only -- excludes
+    memory_repeat_bug, which uses a different two-range schema (see
+    fixtures/memory_case.py) and is driven separately by demo_memory.py."""
     metas = []
     for meta_path in sorted(CASES_DIR.glob("*/meta.json")):
-        metas.append(json.loads(meta_path.read_text()))
+        meta = json.loads(meta_path.read_text())
+        if "difficulty" in meta:
+            metas.append(meta)
     return metas
 
 
@@ -127,6 +132,36 @@ def render_results_md(all_results, cases):
                   f"({sum(1 for c in cases if c['difficulty']=='easy')} easy, "
                   f"{sum(1 for c in cases if c['difficulty']=='medium')} medium, "
                   f"{sum(1 for c in cases if c['difficulty']=='hard')} hard).\n")
+
+    baseline = all_results.get("baseline", [])
+    final = all_results.get("final", [])
+    if baseline and final:
+        n = len(final)
+        base_acc = sum(1 for r in baseline if r["correct"]) / len(baseline) * 100
+        final_acc = sum(1 for r in final if r["correct"]) / n * 100
+        base_cost = sum(r["llm_cost_usd"] or 0 for r in baseline) / len(baseline)
+        final_cost = sum(r["llm_cost_usd"] or 0 for r in final) / n
+        final_execs = sum(r["test_executions"] for r in final) / n
+        lines.append("## Baseline vs. agent (primary comparison)\n")
+        lines.append("| Metric | Simple baseline | Agent solution | Change |")
+        lines.append("|---|---|---|---|")
+        lines.append(f"| Primary outcome (exact-SHA accuracy) | {base_acc:.0f}% "
+                      f"({sum(1 for r in baseline if r['correct'])}/{len(baseline)}) | "
+                      f"{final_acc:.0f}% ({sum(1 for r in final if r['correct'])}/{n}) | "
+                      f"+{final_acc - base_acc:.0f} points |")
+        lines.append(f"| Human time per task | N/A -- fully automated, no human runs either path | "
+                      f"N/A -- fully automated | not applicable; test executions "
+                      f"(0 -> {final_execs:.1f} avg/case) is the closest proxy for effort spent |")
+        lines.append(f"| Cost per task | ${base_cost:.5f} (one short prompt, no diff/test data) | "
+                      f"${final_cost:.5f} (narrowing + verify make 0 LLM calls; "
+                      f"cost is entirely the one explain() call) | "
+                      f"+${final_cost - base_cost:.5f}, and buys a correct, grounded, "
+                      f"causally-explained answer instead of a guess |")
+        lines.append("\n*(Format per the hackathon brief's evaluation guide. \"Human time per "
+                      "task\" doesn't apply here -- both the baseline and the agent are fully "
+                      "automated end to end, which is the point: nobody is bisecting by hand "
+                      "either way. Test executions and wall time are the more meaningful "
+                      "effort proxy, reported in full below.)*\n")
 
     lines.append("## Summary\n")
     lines.append("| Stage | Accuracy | Avg test executions | Avg wall time (s) | Avg LLM cost/case ($) |")

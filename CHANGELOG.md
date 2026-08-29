@@ -1,9 +1,25 @@
 # Improvement Changelog
 
 Every entry below reflects a real run against the 10-case fixture suite
-(`fixtures/cases/`) via `python3 bisect_agent.py eval`. Numbers are pulled
-directly from `eval/raw_results.json` produced by those runs, not estimated
+(`fixtures/cases/`) via `python3 bisect_agent.py eval`, or (for the CI and
+memory extensions) a real live run against a real repo. Numbers are pulled
+directly from `eval/raw_results.json` / linked live artifacts, not estimated
 after the fact.
+
+## At a glance
+
+| Stage | What you tried and why | Evidence | Decision / learning |
+|---|---|---|---|
+| Baseline | Single LLM prompt: commit range + every commit message + failing test name. No diff, no execution. | 60% (6/10) accuracy, 0 test executions, ~$0.00007/case | Established the starting point — right often enough to look competent, wrong with high confidence on misleading commits |
+| Iteration 1 | Gave the agent `run_test`; plain linear scan, oldest commit first, stop at first failure | 90% (9/10), 4.5 test executions/case | Kept as a selectable strategy (`--strategy linear`); missed the deliberately flaky fixture |
+| Iteration 2 | Replaced linear scan with real binary search via `narrow_range` — hand-rolled, not `git bisect run` | 100% (10/10) this run, 4.0 test executions/case (drop grows with range length) | Kept as default — but a single test run per candidate is still not immune to a flaky midpoint sample |
+| Iteration 3 | Added `verify()`: re-run candidate + parent multiple times before trusting a flip | First cut: still 90% (9/10) — `verify()` correctly flagged `confirmed: false` and the orchestrator reported the wrong answer anyway | Revised: added backtrack-and-resample loop. Re-run: 100% (10/10), 12.3 test executions/case. The single most important fix in the build — see "Main failure mode" below |
+| Final | Added `explain()`, strictly grounded in the diff + test output, with a post-hoc ungrounded-file check | 100% maintained, 12.4 test executions/case, ~$0.0002/case, 0 flagged ungrounded | Kept, shipped as the default pipeline |
+| Post-final | Replaced the flat one-sentence explanation with a structured causal chain (code change → effect → propagation → assertion) | 100% maintained, 0 chains flagged ungrounded; real example in `eval/results.md` | Kept — turns "which commit" into a chain a developer can actually follow |
+| Extension 1 | Added CI integration: `.github/workflows/bisect-agent.yml` reuses `run_agent` unchanged, posts/updates one PR comment | Live: [real posted comment](https://github.com/itsdagi/bisect-agent-ci-demo/pull/1#issuecomment-5461903445) on a real PR — correct culprit, High confidence | Kept. First live run surfaced a real gap (target repo's test deps weren't installed) — fixed with a `setup_cmd` config option, now permanent |
+| Extension 2 | Added cross-run memory: `query_history()` (only ever called after `verify()` confirms a culprit) + `record_history()`, feeding `explain()`'s narration only | Two-run demo on `fixtures/cases/memory_repeat_bug/`: run 2 correctly names run 1's regression — see `eval/memory_demo.md` | Kept. Prose-based callback silently failed to fire reliably; moved to a structured `history_note` JSON field, which fires reliably |
+
+Full detail for every entry, including numbers before/after each fix, is below.
 
 ---
 
@@ -228,3 +244,42 @@ the model complies with "fill in this field or leave it null" far more
 reliably than "mention this if relevant" buried in a paragraph. CI
 persistence (surviving ephemeral runners) explicitly deferred, see
 README.md.
+
+---
+
+## Main failure mode
+
+**A component that correctly detects its own uncertainty is worthless if
+nothing downstream acts on that signal.** The first version of `verify()`
+did exactly what it was supposed to: it re-ran the candidate and its
+parent, saw inconsistent results, and returned `confirmed: false`. The bug
+wasn't in detection — it was that the orchestrator treated an unconfirmed
+verification as a warning to log, not a reason to keep looking. It reported
+the wrong commit with a caveat attached, which is the worst of both worlds:
+wrong, but *sounds* careful. The fix wasn't a smarter prompt or a better
+model call — it was making control flow actually branch on `confirmed:
+false` (backtrack, resample, repeat) instead of proceeding past it. The
+same shape of failure showed up again in CI, one layer up the stack: the
+first live run correctly executed `run_test()` at every candidate, got a
+consistent signal ("no module named pytest" at every commit), and
+confidently reported a plausible-sounding culprit anyway — because nothing
+checked that the signal itself was meaningful before trusting it. Grounding
+isn't a property of one tool call; it's a property of whether the system
+around it is willing to change its answer, or its plan, when a tool tells
+it something is wrong.
+
+## Hot take
+
+An ungrounded agent will confidently name a plausible-looking commit even
+when it never ran the test — that's the baseline, right 60% of the time for
+the wrong reason, and wrong with total confidence on `hard_misleading_message`
+because a scarier-sounding neighboring commit message outweighs the boring,
+honest one. But "run the test" turned out to be necessary and not
+sufficient. Two separate components in this build — `verify()` in the core
+loop, and the CI runner's environment check that didn't exist — each
+produced a correct, honest signal that something was wrong, and each time
+the surrounding system ignored it and reported an answer anyway. The
+practical lesson: building a more reliable agent isn't primarily about
+better prompts or bigger models, it's about auditing every point where the
+system *could* discover it's wrong and checking that discovery actually
+changes what happens next. A verify step nobody listens to is decoration.
