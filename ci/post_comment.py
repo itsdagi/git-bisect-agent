@@ -127,6 +127,15 @@ def main():
                   f"{config['path_filters']} (changed: {changed})")
             sys.exit(0)
 
+    if config["setup_cmd"]:
+        print(f"[bisect-agent] running setup_cmd: {config['setup_cmd']}")
+        setup = subprocess.run(config["setup_cmd"], cwd=args.repo_path, shell=True,
+                                capture_output=True, text=True)
+        print(setup.stdout)
+        if setup.returncode != 0:
+            print(f"[bisect-agent] setup_cmd failed (exit {setup.returncode}):\n{setup.stderr}", file=sys.stderr)
+            sys.exit(1)
+
     OUTPUT_DIR.mkdir(exist_ok=True)
     client = get_client()
     logger = TrajectoryLogger(OUTPUT_DIR / "trajectory.jsonl")

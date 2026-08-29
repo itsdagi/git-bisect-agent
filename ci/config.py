@@ -5,15 +5,22 @@ per-repo configuration the CI integration needs.
 Example:
 
     test_cmd: "python -m pytest -q"
+    setup_cmd: "pip install -r requirements.txt"
     path_filters:
       - "src/**"
       - "lib/**"
 
-`test_cmd` is required. `path_filters` is optional: a list of glob patterns
-(matched with fnmatch against paths relative to the repo root). If present,
-the CI workflow skips bisecting entirely when the PR's changed files don't
-touch any of them -- a cheap way to avoid burning CI minutes bisecting a
-failure that's unrelated to the paths this config cares about.
+`test_cmd` is required. `setup_cmd` is optional: run once, in the target
+repo's root, before any bisecting starts (e.g. installing test
+dependencies) -- the CI runner only has the bisect-agent tool's own deps
+installed by default, not the target repo's, so without this every
+run_test() call fails identically ("no module named pytest") and the agent
+correctly but uselessly reports the environment itself as the culprit.
+`path_filters` is optional: a list of glob patterns (matched with fnmatch
+against paths relative to the repo root). If present, the CI workflow skips
+bisecting entirely when the PR's changed files don't touch any of them -- a
+cheap way to avoid burning CI minutes bisecting a failure that's unrelated
+to the paths this config cares about.
 """
 import fnmatch
 from pathlib import Path
@@ -38,6 +45,7 @@ def load_config(path=DEFAULT_CONFIG_PATH):
         raise ConfigError(f"{path} must set a non-empty `test_cmd:`")
     return {
         "test_cmd": str(data["test_cmd"]),
+        "setup_cmd": str(data["setup_cmd"]) if data.get("setup_cmd") else None,
         "path_filters": list(data.get("path_filters") or []),
     }
 
